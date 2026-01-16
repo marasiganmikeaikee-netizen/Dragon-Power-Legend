@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<title>Dragon Power Legends</title>
+<style>
+html,body{margin:0;padding:0;background:#000;color:#fff;overflow:hidden;font-family:Arial;touch-action:none}
+canvas{display:block}
+#cinematic,#overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:80;font-size:28px;background:rgba(0,0,0,.85)}
+#cinematic{display:none;flex-direction:column}
+#overlay{pointer-events:none}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="cinematic"></div>
+<div id="overlay"></div>
+
+<script>
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
+function resize(){canvas.width=innerWidth;canvas.height=innerHeight}resize();addEventListener('resize',resize);
+
+// PARTICLE ENGINE
+class Particle{
+ constructor(x,y,color,life,size,speed){
+  this.x=x;this.y=y;this.color=color;this.life=life;this.size=size;
+  this.vx=(Math.random()-.5)*speed;this.vy=(Math.random()-.5)*speed
+ }
+ update(){this.x+=this.vx;this.y+=this.vy;this.life--}
+ draw(){ctx.fillStyle=this.color;ctx.beginPath();ctx.arc(this.x,this.y,this.size,0,Math.PI*2);ctx.fill()}
+}
+let particles=[];
+function aura(x,y,color,intensity){for(let i=0;i<intensity;i++)particles.push(new Particle(x,y,color,30,3,4))}
+function lightning(x,y){for(let i=0;i<6;i++)particles.push(new Particle(x+Math.random()*40-20,y+Math.random()*40-20,'cyan',20,2,8))}
+
+// CHARACTERS
+const characters={
+ goku:{forms:[
+  {name:'Base',atk:1,skills:[()=>enemy.hp-=8,()=>enemy.hp-=14]},
+  {name:'SSB',atk:1.8,skills:[()=>enemy.hp-=15,()=>enemy.hp-=30]},
+  {name:'Ultra Instinct',atk:2.3,ui:true,skills:[()=>enemy.hp-=22,()=>enemy.hp-=45]}
+ ]},
+ jiren:{boss:true,forms:[
+  {name:'Base',atk:1,skills:[()=>player.hp-=6]},
+  {name:'Full Power',atk:2.4,skills:[()=>player.hp-=20]}
+ ],cinematic:'Power Impact'}
+};
+
+let player={x:canvas.width/2,y:canvas.height-120,hp:140,form:0,char:characters.goku};
+let enemy={x:canvas.width/2,y:120,hp:300,form:0,char:characters.jiren};
+let slow=1,cinTimer=0;
+
+function bossCinematic(){
+ cinematic.style.display='flex';
+ cinematic.innerHTML='<h2>POWER IMPACT</h2><p>Jiren unleashes full power!</p>';
+ slow=.3;cinTimer=120
+}
+
+function update(){
+ particles=particles.filter(p=>p.life>0);particles.forEach(p=>p.update());
+ aura(player.x,player.y,'silver',player.char.forms[player.form].ui?3:1);
+ if(player.char.forms[player.form].ui)lightning(player.x,player.y);
+
+ if(enemy.hp<180&&enemy.form===0){enemy.form=1;bossCinematic()}
+ if(Math.random()<0.02){enemy.char.forms[enemy.form].skills[0]()}
+ if(cinTimer>0){cinTimer--;if(cinTimer===0){cinematic.style.display='none';slow=1;player.hp-=50}}
+}
+
+function draw(){
+ ctx.setTransform(slow,0,0,slow,0,0);
+ ctx.clearRect(0,0,canvas.width,canvas.height);
+ particles.forEach(p=>p.draw());
+ ctx.fillStyle='cyan';ctx.beginPath();ctx.arc(player.x,player.y,22,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle='red';ctx.beginPath();ctx.arc(enemy.x,enemy.y,30,0,Math.PI*2);ctx.fill();
+}
+
+function loop(){update();draw();requestAnimationFrame(loop)}loop();
+</script>
+</body>
+</html>
